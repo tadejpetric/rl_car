@@ -7,18 +7,22 @@ import torch.nn as nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
+from resized_car_racing import CarRacing2
+
+gym.register(
+    id="CarRacing2",
+    entry_point=CarRacing2,
+)
+
+env = gym.make("CarRacing2", render_mode="rgb_array", lap_complete_percent=0.95, domain_randomize=False, continuous=True)
 
 # Define a custom CNN feature extractor
 class CustomCNN(BaseFeaturesExtractor):
     def __init__(self, observation_space, features_dim=256):
         super(CustomCNN, self).__init__(observation_space, features_dim)
-        # The observation space for CarRacing-v3 is expected to be either (96, 96, 3) or (3, 96, 96)
-        # If it's (96, 96, 3), then the channel dimension is at index 2, otherwise at index 0.
-        # Here we assume that if observation_space.shape[2] exists, then it's HxWxC.
-        if len(observation_space.shape) == 3 and observation_space.shape[0] == 3:
-            n_input_channels = observation_space.shape[0]
-        else:
-            n_input_channels = observation_space.shape[2]
+        # print(observation_space.shape) # -> (3, 224, 224)
+
+        n_input_channels = observation_space.shape[0]
 
         self.cnn = nn.Sequential(
             # Conv2d expects input shape: (batch_size, channels, height, width)
@@ -35,18 +39,11 @@ class CustomCNN(BaseFeaturesExtractor):
         with th.no_grad():
             sample_obs = observation_space.sample()
             sample_obs = th.as_tensor(sample_obs, dtype=th.float32).unsqueeze(0)
-            # Check if we need to permute: if the observation is HxWxC (i.e., shape[0] != 3), permute it.
-            if sample_obs.ndim == 4 and sample_obs.shape[1] != 3:
-                sample_obs = sample_obs.permute(0, 3, 1, 2)
             n_flatten = self.cnn(sample_obs).shape[1]
 
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
     def forward(self, observations):
-        # observations might be in (B, H, W, C) or (B, C, H, W)
-        # Check if the second dimension is not 3; if so, assume the format is HxWxC and permute.
-        if observations.ndim == 4 and observations.shape[1] != 3:
-            observations = observations.permute(0, 3, 1, 2)
         observations = observations.float()
         cnn_output = self.cnn(observations)
         return self.linear(cnn_output)
@@ -54,7 +51,7 @@ class CustomCNN(BaseFeaturesExtractor):
 
 # Create the CarRacing-v3 environment
 env = gym.make(
-    "CarRacing-v3",
+    "CarRacing2",
     render_mode="rgb_array",
     lap_complete_percent=0.95,
     domain_randomize=False,
@@ -70,12 +67,14 @@ policy_kwargs = dict(
 from gymnasium.wrappers import TimeLimit
 
 # Initialize the PPO agent with the custom CNN policy.
-if os.path.exists("ppo_carracing_custom_cnn2.zip"):
+if os.path.exists("ppo_carracing_custom_cnn_up3.zip"):
     model = PPO.load(
-        "ppo_carracing_custom_cnn2",
-        env=TimeLimit(env, 512),
-        n_steps=512,
+        "ppo_carracing_custom_cnn_up3",
+        env=TimeLimit(env, 1000),
+        learning_rate=1e-4,
+        n_steps=1000,
         tensorboard_log="./tensorboard/",
+        device="cuda"
     )
     print("loaded")
 else:
@@ -92,13 +91,7 @@ else:
     print("inited")
 
 # Train the agent
-model.learn(total_timesteps=256 * 100, progress_bar=True, tb_log_name="CNN_run_3")
+model.learn(total_timesteps=1000 * 500, progress_bar=True, tb_log_name="CNN_run_upscaled")
 
 # Optionally, save the model
-model.save("ppo_carracing_custom_cnn3")
-
-# CNN 1: 256 time limit & steps
-# CNN 2: 512 time limit & steps
-
-# To load the trained model later:
-# model = PPO.load("ppo_carracing_custom_cnn", env=env)
+model.save("ppo_carracing_custom_cnn_up4")

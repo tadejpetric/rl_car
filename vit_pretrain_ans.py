@@ -36,10 +36,6 @@ class CustomViT(BaseFeaturesExtractor):
         # Remove the classification head to obtain the raw features.
         self.vit.head = nn.Identity()
         # The ViT outputs 768-dimensional features. We add an adapter to map these to the desired feature_dim.
-        self.adapter = nn.Sequential(
-            nn.Linear(768, features_dim),
-            nn.ReLU()
-        )
     
     def forward(self, observations):
         # Convert observations to float and scale from [0, 255] to [0, 1].
@@ -51,7 +47,7 @@ class CustomViT(BaseFeaturesExtractor):
         # Pass the normalized image through the ViT to get a 768-dim representation.
         vit_features = self.vit(observations)  # Expected shape: (batch, 768)
         # Use the adapter to produce the final feature vector.
-        return self.adapter(vit_features)
+        return vit_features
 
 # Recreate the environment (if needed)
 env = gym.make(
@@ -65,7 +61,7 @@ env = gym.make(
 # Specify policy keyword arguments to use the custom ViT feature extractor.
 policy_kwargs = dict(
     features_extractor_class=CustomViT,
-    features_extractor_kwargs=dict(features_dim=256),
+    features_extractor_kwargs=dict(features_dim=768),
 )
 
 from gymnasium.wrappers import TimeLimit

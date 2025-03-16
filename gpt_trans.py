@@ -10,7 +10,7 @@ from gymnasium.wrappers import TimeLimit
 
 # Define a custom Transformer feature extractor
 class CustomTransformer(BaseFeaturesExtractor):
-    def __init__(self, observation_space, features_dim=256, patch_size=16, num_layers=4, num_heads=8, dropout=0.1):
+    def __init__(self, observation_space, features_dim=256, patch_size=16, num_layers=4, num_heads=8, dropout=0.01):
         super(CustomTransformer, self).__init__(observation_space, features_dim)
         # Determine input shape and channels.
         shape = observation_space.shape
@@ -88,7 +88,7 @@ env = gym.make(
 # Define policy keyword arguments to use the custom Transformer feature extractor
 policy_kwargs = dict(
     features_extractor_class=CustomTransformer,
-    features_extractor_kwargs=dict(features_dim=256, patch_size=8, num_layers=4, num_heads=8, dropout=0.1),
+    features_extractor_kwargs=dict(features_dim=256, patch_size=8, num_layers=4, num_heads=8, dropout=0.01),
 )
 
 # Initialize the PPO agent with the custom Transformer policy.

@@ -31,8 +31,8 @@ except ImportError as e:
     ) from e
 
 
-STATE_W = 96  # less than Atari 160x192
-STATE_H = 96
+STATE_W = 224  # less than Atari 160x192
+STATE_H = 224
 VIDEO_W = 600
 VIDEO_H = 400
 WINDOW_W = 1000
@@ -103,16 +103,9 @@ class FrictionDetector(contactListener):
                     self.env.new_lap = True
         else:
             obj.tiles.remove(tile)
-from dataclasses import dataclass
 
-@dataclass
-class MetaData:
-    speed1: float
-    speed2: float
-    turning: float
-    gyro: float
 
-class CarRacing(gym.Env, EzPickle):
+class CarRacing2(gym.Env, EzPickle):
     """
     ## Description
     The easiest control task to learn from pixels - a top-down
@@ -132,7 +125,7 @@ class CarRacing(gym.Env, EzPickle):
     If continuous there are 3 actions :
     - 0: steering, -1 is full left, +1 is full right
     - 1: gas
-    - 2: braking
+    - 2: breaking
 
     If discrete there are 5 actions:
     - 0: do nothing
@@ -543,13 +536,13 @@ class CarRacing(gym.Env, EzPickle):
 
         if self.render_mode == "human":
             self.render()
-        return self.step(None)[0], {"metastate": self.metastate}
+        return self.step(None)[0], {}
 
     def step(self, action: Union[np.ndarray, int]):
         assert self.car is not None
         if action is not None:
+            action = action.astype(np.float64)
             if self.continuous:
-                action = action.astype(np.float64)
                 self.car.steer(-action[0])
                 self.car.gas(action[1])
                 self.car.brake(action[2])
@@ -567,19 +560,12 @@ class CarRacing(gym.Env, EzPickle):
         self.world.Step(1.0 / FPS, 6 * 30, 2 * 30)
         self.t += 1.0 / FPS
 
-
-        self.metastate = MetaData(
-            speed1 = self.car.hull.linearVelocity[0],
-            speed2 = self.car.hull.linearVelocity[1],
-            turning= self.car.wheels[0].joint.angle,
-            gyro = self.car.hull.angularVelocity,
-        )
         self.state = self._render("state_pixels")
 
         step_reward = 0
         terminated = False
         truncated = False
-        info = {"metastate": self.metastate}
+        info = {}
         if action is not None:  # First step without action, called from reset()
             self.reward -= 0.1
             # We actually don't want to count fuel spent, we want car to be faster.
@@ -633,8 +619,7 @@ class CarRacing(gym.Env, EzPickle):
         # computing transformations
         angle = -self.car.hull.angle
         # Animating first second zoom.
-        #zoom = 0.1 * SCALE * max(1 - self.t, 0) + ZOOM * SCALE * min(self.t, 1)
-        zoom = ZOOM * SCALE
+        zoom = 0.1 * SCALE * max(1 - self.t, 0) + ZOOM * SCALE * min(self.t, 1)
         scroll_x = -(self.car.hull.position[0]) * zoom
         scroll_y = -(self.car.hull.position[1]) * zoom
         trans = pygame.math.Vector2((scroll_x, scroll_y)).rotate_rad(angle)
