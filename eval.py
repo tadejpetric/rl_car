@@ -8,13 +8,13 @@ from gymnasium.utils.save_video import save_video
 from resized_car_racing import CarRacing2
 
 
-env = gym.make(
-    "CarRacing-v3",
-    render_mode="rgb_array",
-    lap_complete_percent=0.95,
-    domain_randomize=False,
-    continuous=True
-)
+#env = gym.make(
+#    "CarRacing-v3",
+#    render_mode="rgb_array",
+#    lap_complete_percent=0.95,
+#    domain_randomize=False,
+#    continuous=True
+#)
 
 gym.register(
     id="CarRacing2",
@@ -30,8 +30,7 @@ env = gym.make(
     continuous=True,
 )
 
-cp_name = "ppo_carracing_custom_cnn3"
-cp_name = "ppo_carracing_custom_vit"
+cp_name = "CNN_upscaled_256_255_0_0"
 model = PPO.load(cp_name, env=env)
 
 ep_len = 500

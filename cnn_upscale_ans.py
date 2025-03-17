@@ -67,23 +67,27 @@ policy_kwargs = dict(
 from gymnasium.wrappers import TimeLimit
 
 # Initialize the PPO agent with the custom CNN policy.
-if os.path.exists("ppo_carracing_custom_cnn_up3.zip"):
+
+old_name = "xxCNN_upscaled_512_256_1_0"
+new_name = "CNN_upscaled_1000_1000_3_0"
+if os.path.exists(f"{old_name}.zip"):
     model = PPO.load(
-        "ppo_carracing_custom_cnn_up3",
+        old_name,
+        policy="CnnPolicy",
         env=TimeLimit(env, 1000),
         learning_rate=1e-4,
         n_steps=1000,
         tensorboard_log="./tensorboard/",
-        device="cuda"
+        device="cpu"
     )
     print("loaded")
 else:
     model = PPO(
         "CnnPolicy",
-        env=TimeLimit(env, 256),
+        env=TimeLimit(env, 1000),
         policy_kwargs=policy_kwargs,
         verbose=1,
-        n_steps=256,
+        n_steps=1000,
         learning_rate=3e-4,
         tensorboard_log="./tensorboard/",
         device="cpu",  # Use CPU for training
@@ -91,7 +95,8 @@ else:
     print("inited")
 
 # Train the agent
-model.learn(total_timesteps=1000 * 500, progress_bar=True, tb_log_name="CNN_run_upscaled")
+# log name is <network>_<time limit>_<n steps>_<run id>_<pretrain id>
+model.learn(total_timesteps=256 * 128, progress_bar=True, tb_log_name=new_name)
 
 # Optionally, save the model
-model.save("ppo_carracing_custom_cnn_up4")
+model.save(new_name)

@@ -831,7 +831,7 @@ if __name__ == "__main__":
             if event.type == pygame.QUIT:
                 quit = True
 
-    env = CarRacing(render_mode="human")
+    env = CarRacing2(render_mode="human")
 
     quit = False
     while not quit:
