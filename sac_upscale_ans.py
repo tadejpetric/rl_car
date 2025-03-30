@@ -4,7 +4,7 @@ import numpy as np
 import torch as th
 import torch.nn as nn
 
-from stable_baselines3 import PPO
+from stable_baselines3 import SAC
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 
 from resized_car_racing import CarRacing2
@@ -14,7 +14,14 @@ gym.register(
     entry_point=CarRacing2,
 )
 
-env = gym.make("CarRacing2", render_mode="rgb_array", lap_complete_percent=0.95, domain_randomize=False, continuous=True)
+env = gym.make(
+    "CarRacing2",
+    render_mode="rgb_array",
+    lap_complete_percent=0.95,
+    domain_randomize=False,
+    continuous=True,
+)
+
 
 # Define a custom CNN feature extractor
 class CustomCNN(BaseFeaturesExtractor):
@@ -68,39 +75,36 @@ from gymnasium.wrappers import TimeLimit
 
 # Initialize the PPO agent with the custom CNN policy.
 
-old_name = "CNN_upscaled_256_256_0_0"
-new_name = "CNN_upscaled_512_256_10_0"
+old_name = "SAC_CNN_256_1"
+new_name = "SAC_CNN_256_1"
+
 if os.path.exists(f"{old_name}.zip"):
-    model = PPO.load(
+    model = SAC.load(
         old_name,
         policy="CnnPolicy",
-        env=TimeLimit(env, 512),
-        learning_rate=1e-4,
-        n_steps=256,
-        #batch_size=500,
-        #clip_range=0.3,
+        env=env,
         tensorboard_log="./tensorboard/",
-        device="cuda"
+        device="cuda",
     )
     print("loaded")
 else:
-    model = PPO(
+    model = SAC(
         "CnnPolicy",
-        env=TimeLimit(env, 1000),
+        env=TimeLimit(env, 256),
         policy_kwargs=policy_kwargs,
         verbose=1,
-        n_steps=1000,
-        batch_size=500,
-        clip_range=0.2,
-        learning_rate=3e-4,
+        learning_rate=1e-3,
+        buffer_size=20000,  # Slightly larger buffer if feasible
+        batch_size=64,
         tensorboard_log="./tensorboard/",
-        device="cuda",  # Use CPU for training
+        device="cuda",
     )
     print("inited")
 
+
 # Train the agent
 # log name is <network>_<time limit>_<n steps>_<run id>_<pretrain id>
-model.learn(total_timesteps=500 * 256, progress_bar=True, tb_log_name=new_name)
+model.learn(total_timesteps=256 * 128, progress_bar=True, tb_log_name=new_name)
 
 # Optionally, save the model
 model.save(new_name)

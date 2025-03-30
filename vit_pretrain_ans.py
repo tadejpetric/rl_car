@@ -67,9 +67,11 @@ policy_kwargs = dict(
 from gymnasium.wrappers import TimeLimit
 
 # Initialize the PPO agent with the custom ViT policy.
-if os.path.exists("ppo_carracing_custom_vit.zip"):
+old_name = "VIT_pretrain_256_256_0_0"
+new_name = "VIT_pretrain_256_256_0_0"
+if os.path.exists(f"{old_name}.zip"):
     model = PPO.load(
-        "ppo_carracing_custom_vit",
+        old_name,
         env=TimeLimit(env, 512),
         n_steps=512,
         tensorboard_log="./tensorboard/",
@@ -82,6 +84,7 @@ else:
         policy_kwargs=policy_kwargs,
         verbose=1,
         n_steps=256,
+        batch_size=64,
         learning_rate=3e-4,
         tensorboard_log="./tensorboard/",
         device="cuda",  # Use CPU for training
@@ -89,7 +92,7 @@ else:
     print("inited")
 
 # Train the agent
-model.learn(total_timesteps=256 * 100, progress_bar=True, tb_log_name="ViT_run")
+model.learn(total_timesteps=512 * 20, progress_bar=True, tb_log_name=new_name)
 
 # Optionally, save the model
-model.save("ppo_carracing_custom_vit")
+model.save(new_name)

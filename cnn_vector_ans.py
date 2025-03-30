@@ -65,32 +65,58 @@ policy_kwargs = dict(
 )
 
 from gymnasium.wrappers import TimeLimit
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecFrameStack
+from stable_baselines3.common.env_util import make_vec_env
 
 # Initialize the PPO agent with the custom CNN policy.
+num_envs = 64
+num_stacks = 4
+episode_steps = 1000
+n_steps = 4096
 
-old_name = "CNN_upscaled_256_256_0_0"
-new_name = "CNN_upscaled_512_256_10_0"
+def make_env():
+    env = gym.make(
+        "CarRacing2",
+        render_mode="rgb_array",
+        lap_complete_percent=0.95,
+        domain_randomize=False,
+        continuous=True,
+    )
+    # Apply TimeLimit wrapper (optional, e.g., max 1000 steps)
+    env = TimeLimit(env, max_episode_steps=1000)
+    return env
+
+# Number of parallel environments
+vec_env = make_vec_env(make_env, num_envs)
+
+# (Optional) Stack frames if needed (useful for image-based inputs)
+vec_env = VecFrameStack(vec_env, n_stack=num_stacks)
+
+old_name = f"CNN_4_64_up_1000_4096_12_11"
+new_name = f"CNN_{num_stacks}_{num_envs}_up_{episode_steps}_{n_steps}_13_12"
 if os.path.exists(f"{old_name}.zip"):
     model = PPO.load(
         old_name,
         policy="CnnPolicy",
-        env=TimeLimit(env, 512),
+        env=TimeLimit(env, episode_steps),
+        verbose=1,
+        n_steps=n_steps,
+        batch_size=512,
+        clip_range=0.2,
         learning_rate=1e-4,
-        n_steps=256,
-        #batch_size=500,
-        #clip_range=0.3,
         tensorboard_log="./tensorboard/",
         device="cuda"
     )
+    print(model.observation_space)
     print("loaded")
 else:
     model = PPO(
         "CnnPolicy",
-        env=TimeLimit(env, 1000),
+        env=TimeLimit(env, episode_steps),
         policy_kwargs=policy_kwargs,
         verbose=1,
-        n_steps=1000,
-        batch_size=500,
+        n_steps=n_steps,
+        batch_size=512,
         clip_range=0.2,
         learning_rate=3e-4,
         tensorboard_log="./tensorboard/",
@@ -100,7 +126,8 @@ else:
 
 # Train the agent
 # log name is <network>_<time limit>_<n steps>_<run id>_<pretrain id>
-model.learn(total_timesteps=500 * 256, progress_bar=True, tb_log_name=new_name)
+model.learn(total_timesteps=256 * 1024, progress_bar=True, tb_log_name=new_name)
 
 # Optionally, save the model
 model.save(new_name)
+print(new_name)

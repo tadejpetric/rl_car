@@ -22,18 +22,37 @@ gym.register(
 )
 
 # Create the environment
-env = gym.make(
-    "CarRacing2",
-    render_mode="rgb_array",
-    lap_complete_percent=0.95,
-    domain_randomize=False,
-    continuous=True,
-)
+#env = gym.make(
+#    "CarRacing2",
+#    render_mode="rgb_array",
+#    lap_complete_percent=0.95,
+#    domain_randomize=False,
+#    continuous=True,
+#)
 
-cp_name = "CNN_upscaled_256_255_0_0"
+cp_name = "CNN_4_64_up_1000_4096_13_12"
+from gymnasium.wrappers import TimeLimit
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecFrameStack
+from stable_baselines3.common.env_util import make_vec_env
+def make_env():
+    env = gym.make(
+        "CarRacing2",
+        render_mode="rgb_array",
+        lap_complete_percent=0.95,
+        domain_randomize=False,
+        continuous=True,
+    )
+    # Apply TimeLimit wrapper (optional, e.g., max 1000 steps)
+    env = TimeLimit(env, max_episode_steps=1000)
+    return env
+
+vec_env = make_vec_env(make_env, 64)
+
+# (Optional) Stack frames if needed (useful for image-based inputs)
+env = VecFrameStack(vec_env, n_stack=4)
 model = PPO.load(cp_name, env=env)
 
-ep_len = 500
+ep_len = 1000
 
 renders = []
 
